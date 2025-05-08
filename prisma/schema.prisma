@@ -7,32 +7,314 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Constantes pour les valeurs d'énumération
+// Ces commentaires servent de documentation pour les valeurs valides
+
+// UserRole: admin, project_manager, member, client
+// SubscriptionType: free, standard, premium
+// OrganizationUserRole: owner, admin, member
+// ProjectStatus: planning, active, on_hold, completed, archived
+// ProjectMemberRole: project_manager, team_member, viewer
+// BoardType: kanban, scrum, list
+// TaskPriority: low, medium, high, urgent
+// TaskStatus: to_do, in_progress, in_review, done, cancelled
+// NotificationType: task_assignment, comment, mention, due_date, other
+// InvoiceStatus: draft, sent, paid, cancelled
+
+// Models
 model User {
-  id    String @id @default(cuid())
-  email String @unique
+  id                String    @id @default(uuid())
+  email             String    @unique
+  passwordHash      String
+  firstName         String
+  lastName          String
+  role              String     // admin, project_manager, member, client
+  avatarUrl         String?
+  twoFactorEnabled  Boolean   @default(false)
+  twoFactorSecret   String?
+  lastLogin         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
+  // Relations
+  organizationUsers OrganizationUser[]
+  projectsCreated   Project[]
+  projectMembers    ProjectMember[]
+  taskAssignments   TaskAssignment[]
+  comments          Comment[]
+  attachments       Attachment[]
+  timeEntries       TimeEntry[]
+  invoicesCreated   Invoice[]  @relation("InvoiceCreator")
+  clientInvoices    Invoice[]  @relation("InvoiceClient")
+  notifications     Notification[]
+  tasksCreated      Task[]     @relation("TaskCreator")
+}
+
+model Organization {
+  id                 String           @id @default(uuid())
+  name               String
+  logoUrl            String?
+  subscriptionType   String           // free, standard, premium
+  subscriptionExpires DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  // Relations
+  users              OrganizationUser[]
+  projects           Project[]
+}
+
+model OrganizationUser {
+  id             String               @id @default(uuid())
+  organizationId String
+  userId         String
+  role           String               // owner, admin, member
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  // Relations
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+}
+
+model Project {
+  id             String        @id @default(uuid())
+  organizationId String
+  name           String
+  description    String
+  status         String        // planning, active, on_hold, completed, archived
+  startDate      DateTime
+  endDate        DateTime?
+  budget         Float?
+  currency       String        @default("EUR")
+  createdById    String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Relations
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User          @relation(fields: [createdById], references: [id])
+  members        ProjectMember[]
+  boards         Board[]
+  tasks          Task[]
+  invoices       Invoice[]
+  taskLabels     TaskLabel[]
+}
+
+model ProjectMember {
+  id         String            @id @default(uuid())
+  projectId  String
+  userId     String
+  role       String            // project_manager, team_member, viewer
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  // Relations
+  project    Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+}
+
+model Board {
+  id          String     @id @default(uuid())
+  projectId   String
+  name        String
+  description String?
+  type        String     // kanban, scrum, list
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  columns     Column[]
+}
+
+model Column {
+  id         String   @id @default(uuid())
+  boardId    String
+  name       String
+  position   Int
+  color      String
+  taskLimit  Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  board      Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks      Task[]
+}
+
+model Task {
+  id             String          @id @default(uuid())
+  columnId       String
+  projectId      String
+  title          String
+  description    String?
+  priority       String          // low, medium, high, urgent
+  status         String          // to_do, in_progress, in_review, done, cancelled
+  position       Int
+  dueDate        DateTime?
+  estimatedHours Float?
+  createdById    String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  // Relations
+  column         Column          @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy      User            @relation("TaskCreator", fields: [createdById], references: [id])
+  assignments    TaskAssignment[]
+  labelAssignments TaskLabelAssignment[]
+  comments       Comment[]
+  attachments    Attachment[]
+  timeEntries    TimeEntry[]
+  invoiceItems   InvoiceItem[]
+}
+
+model TaskAssignment {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  password Password?
-  notes    Note[]
+  // Relations
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
 }
 
-model Password {
-  hash String
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  userId String @unique
-}
-
-model Note {
-  id    String @id @default(cuid())
-  title String
-  body  String
-
+model TaskLabel {
+  id        String   @id @default(uuid())
+  projectId String
+  name      String
+  color     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  userId String
+  // Relations
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignments TaskLabelAssignment[]
+}
+
+model TaskLabelAssignment {
+  id        String   @id @default(uuid())
+  taskId    String
+  labelId   String
+  createdAt DateTime @default(now())
+
+  // Relations
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label     TaskLabel @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, labelId])
+}
+
+model Comment {
+  id        String    @id @default(uuid())
+  taskId    String
+  userId    String
+  content   String
+  parentId  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id])
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  taskId    String
+  userId    String
+  fileName  String
+  filePath  String
+  fileSize  Int
+  fileType  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model TimeEntry {
+  id          String   @id @default(uuid())
+  taskId      String
+  userId      String
+  description String?
+  startTime   DateTime
+  endTime     DateTime?
+  duration    Int
+  billable    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  projectId     String
+  clientId      String
+  invoiceNumber String
+  issueDate     DateTime
+  dueDate       DateTime
+  status        String        // draft, sent, paid, cancelled
+  subtotal      Float
+  taxRate       Float
+  taxAmount     Float
+  total         Float
+  notes         String?
+  createdById   String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  project       Project       @relation(fields: [projectId], references: [id])
+  client        User          @relation("InvoiceClient", fields: [clientId], references: [id])
+  createdBy     User          @relation("InvoiceCreator", fields: [createdById], references: [id])
+  items         InvoiceItem[]
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  taskId      String?
+  description String
+  quantity    Float
+  unitPrice   Float
+  amount      Float
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  task        Task?    @relation(fields: [taskId], references: [id])
+}
+
+model Notification {
+  id            String           @id @default(uuid())
+  userId        String
+  type          String           // task_assignment, comment, mention, due_date, other
+  title         String
+  content       String?
+  referenceId   String
+  referenceType String
+  read          Boolean          @default(false)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  // Relations
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
