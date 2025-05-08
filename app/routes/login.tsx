@@ -62,11 +62,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   });
 };
 
-export const meta: MetaFunction = () => [{ title: "Login" }];
+export const meta: MetaFunction = () => [{ title: "Connexion | TaskFlow Pro" }];
 
 export default function LoginPage() {
   const [searchParams] = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") || "/notes";
+  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
   const actionData = useActionData<typeof action>();
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
@@ -80,15 +80,20 @@ export default function LoginPage() {
   }, [actionData]);
 
   return (
-    <div className="flex min-h-full flex-col justify-center">
+    <div className="flex min-h-full flex-col justify-center bg-gradient-to-b from-indigo-50 to-white py-12">
       <div className="mx-auto w-full max-w-md px-8">
-        <Form method="post" className="space-y-6">
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-extrabold text-indigo-900">TaskFlow Pro</h1>
+          <p className="mt-2 text-gray-600">Connectez-vous à votre compte</p>
+        </div>
+        <div className="rounded-lg bg-white p-8 shadow-md">
+          <Form method="post" className="space-y-6">
           <div>
             <label
               htmlFor="email"
               className="block text-sm font-medium text-gray-700"
             >
-              Email address
+              Adresse email
             </label>
             <div className="mt-1">
               <input
@@ -102,10 +107,10 @@ export default function LoginPage() {
                 autoComplete="email"
                 aria-invalid={actionData?.errors?.email ? true : undefined}
                 aria-describedby="email-error"
-                className="w-full rounded border border-gray-500 px-2 py-1 text-lg"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
               {actionData?.errors?.email ? (
-                <div className="pt-1 text-red-700" id="email-error">
+                <div className="pt-1 text-sm text-red-600" id="email-error">
                   {actionData.errors.email}
                 </div>
               ) : null}
@@ -113,12 +118,22 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Password
-            </label>
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Mot de passe
+              </label>
+              <div className="text-sm">
+                <Link 
+                  to="/forgot-password" 
+                  className="font-medium text-indigo-600 hover:text-indigo-500"
+                >
+                  Mot de passe oublié ?
+                </Link>
+              </div>
+            </div>
             <div className="mt-1">
               <input
                 id="password"
@@ -128,52 +143,64 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 aria-invalid={actionData?.errors?.password ? true : undefined}
                 aria-describedby="password-error"
-                className="w-full rounded border border-gray-500 px-2 py-1 text-lg"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
               {actionData?.errors?.password ? (
-                <div className="pt-1 text-red-700" id="password-error">
+                <div className="pt-1 text-sm text-red-600" id="password-error">
                   {actionData.errors.password}
                 </div>
               ) : null}
             </div>
           </div>
 
+          <div className="flex items-center">
+            <input
+              id="remember"
+              name="remember"
+              type="checkbox"
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <label
+              htmlFor="remember"
+              className="ml-2 block text-sm text-gray-900"
+            >
+              Se souvenir de moi
+            </label>
+          </div>
+
           <input type="hidden" name="redirectTo" value={redirectTo} />
           <button
             type="submit"
-            className="w-full rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 focus:bg-blue-400"
+            className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
           >
-            Log in
+            Se connecter
           </button>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember"
-                name="remember"
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <label
-                htmlFor="remember"
-                className="ml-2 block text-sm text-gray-900"
-              >
-                Remember me
-              </label>
+
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="bg-white px-2 text-gray-500">Ou</span>
+              </div>
             </div>
-            <div className="text-center text-sm text-gray-500">
-              Don&apos;t have an account?{" "}
+
+            <div className="mt-6 text-center text-sm text-gray-500">
+              Vous n'avez pas encore de compte ?{" "}
               <Link
-                className="text-blue-500 underline"
+                className="font-medium text-indigo-600 hover:text-indigo-500"
                 to={{
                   pathname: "/join",
                   search: searchParams.toString(),
                 }}
               >
-                Sign up
+                S'inscrire
               </Link>
             </div>
           </div>
-        </Form>
+          </Form>
+        </div>
       </div>
     </div>
   );
