@@ -1,5 +1,5 @@
 node_modules
-
+.windsurf
 /build
 /public/build
 .env
@@ -9,4 +9,3 @@ node_modules
 /prisma/data.db
 /prisma/data.db-journal
 
-.windsurf
